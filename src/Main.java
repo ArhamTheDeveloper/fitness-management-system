@@ -3,7 +3,7 @@ import java.sql.Connection;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("🚀 Initializing FlexDB...");
+        System.out.println("🚀 Initializing FitnessMS...");
 
         // Testing the connection
         Connection testConn = DBConnection.getConnection();
