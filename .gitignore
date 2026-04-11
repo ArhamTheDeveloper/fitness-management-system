@@ -1,3 +1,13 @@
+# Ignore all compiled Java files
+*.class
+
+# Ignore IntelliJ internal settings
 .idea/
 *.iml
+
+# Ignore VS Code specific settings (optional but recommended for teams)
+.vscode/
+
+# Ignore the build output folder
 out/
+bin/
