@@ -39,3 +39,6 @@ INSERT INTO exercises (exercise_name, category) VALUES
 ('Swimming', 'Cardio'),
 ('Jump Rope', 'Cardio'),
 ('Yoga', 'Flexibility');
+
+ALTER TABLE exercises
+MODIFY category ENUM('STRENGTH', 'CARDIO', 'FLEXIBILITY') NOT NULL;

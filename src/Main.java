@@ -1,4 +1,6 @@
 import database.DBConnection;
+import ui.MenuHandler;
+
 import java.sql.Connection;
 
 public class Main {
@@ -13,5 +15,7 @@ public class Main {
         } else {
             System.out.println("⚠️ Connection failed. Check your password and MySQL server.");
         }
+
+        new MenuHandler().start();
     }
 }
