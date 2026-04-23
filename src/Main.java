@@ -1,21 +1,23 @@
 import database.DBConnection;
 import ui.MenuHandler;
+import ui.FitnessSwingApp;
 
 import java.sql.Connection;
+import javax.swing.SwingUtilities;
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("🚀 Initializing FitnessMS...");
+        if (args.length > 0 && "cli".equalsIgnoreCase(args[0])) {
+            Connection testConn = DBConnection.getConnection();
 
-        // Testing the connection
-        Connection testConn = DBConnection.getConnection();
+            if (testConn == null) {
+                System.out.println("Connection failed. Check your database settings and MySQL server.");
+            }
 
-        if (testConn != null) {
-            System.out.println("✅ JDBC is working! Connection to MySQL successful.");
-        } else {
-            System.out.println("⚠️ Connection failed. Check your password and MySQL server.");
+            new MenuHandler().start();
+            return;
         }
 
-        new MenuHandler().start();
+        SwingUtilities.invokeLater(() -> new FitnessSwingApp().show());
     }
 }

@@ -1,0 +1,316 @@
+package ui;
+
+import database.ExerciseDAO;
+import database.UserDAO;
+import database.WorkoutDAO;
+import java.awt.CardLayout;
+import java.awt.Dimension;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTable;
+import javax.swing.UIManager;
+import javax.swing.WindowConstants;
+import javax.swing.table.DefaultTableModel;
+import models.Exercise;
+import models.User;
+import models.Workout;
+import services.AuthService;
+import services.ServiceResult;
+import services.WorkoutService;
+
+public class FitnessSwingApp {
+    private static final String LOGIN_CARD = "login";
+    private static final String REGISTER_CARD = "register";
+    private static final String DASHBOARD_CARD = "dashboard";
+
+    private final JFrame frame;
+    private final JPanel rootPanel = new JPanel(new CardLayout());
+    private final JPanel authPanel = new JPanel(new CardLayout());
+
+    private final AuthService authService = new AuthService(new UserDAO());
+    private final WorkoutService workoutService = new WorkoutService(new ExerciseDAO(), new WorkoutDAO());
+
+    private final javax.swing.JTextField loginUsernameField = new javax.swing.JTextField(18);
+    private final javax.swing.JPasswordField loginPasswordField = new javax.swing.JPasswordField(18);
+
+    private final javax.swing.JTextField registerUsernameField = new javax.swing.JTextField(18);
+    private final javax.swing.JPasswordField registerPasswordField = new javax.swing.JPasswordField(18);
+    private final javax.swing.JTextField registerWeightField = new javax.swing.JTextField(18);
+    private final javax.swing.JTextField registerGoalField = new javax.swing.JTextField(18);
+
+    private final JLabel welcomeLabel = new JLabel("Welcome");
+    private final JLabel workoutCountValueLabel = new JLabel("0");
+    private final DefaultTableModel workoutTableModel = new DefaultTableModel(
+            new Object[]{"Log ID", "Exercise", "Sets", "Reps", "Weight (kg)", "Date"},
+            0
+    ) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
+    private final JTable workoutTable = new JTable(workoutTableModel);
+
+    private final Map<Integer, String> exerciseNameCache = new HashMap<>();
+    private User currentUser;
+
+    public FitnessSwingApp() {
+        initializeLookAndFeel();
+
+        frame = new JFrame("Fitness Management System");
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.setMinimumSize(new Dimension(1100, 720));
+        frame.setLocationRelativeTo(null);
+
+        buildAuthPanel();
+        rootPanel.add(authPanel, LOGIN_CARD);
+        rootPanel.add(buildDashboardPanel(), DASHBOARD_CARD);
+        frame.setContentPane(rootPanel);
+
+        showLoginCard();
+    }
+
+    public void show() {
+        frame.setVisible(true);
+    }
+
+    private void initializeLookAndFeel() {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void buildAuthPanel() {
+        authPanel.add(new LoginPanel(loginUsernameField, loginPasswordField, this::handleLogin, this::showRegisterCard), LOGIN_CARD);
+        authPanel.add(new RegisterPanel(registerUsernameField, registerPasswordField, registerWeightField, registerGoalField, this::handleRegister, this::showLoginCard), REGISTER_CARD);
+    }
+
+    private JPanel buildDashboardPanel() {
+        return new DashboardPanel(
+                welcomeLabel,
+                workoutCountValueLabel,
+                workoutTable,
+                this::handleAddWorkout,
+                this::handleViewAll,
+                this::handleViewRecent,
+                this::handleDateRange,
+                this::updateWorkoutCount,
+                this::handleLogout
+        );
+    }
+
+    private void handleLogin() {
+        String username = loginUsernameField.getText().trim();
+        String password = new String(loginPasswordField.getPassword());
+
+        ServiceResult<User> result = authService.loginUser(username, password);
+        if (!result.isSuccess()) {
+            showError(result.getMessage());
+            return;
+        }
+
+        currentUser = result.getData();
+        loginPasswordField.setText("");
+        showDashboardCard();
+        refreshDashboard();
+    }
+
+    private void handleRegister() {
+        String username = registerUsernameField.getText().trim();
+        String password = new String(registerPasswordField.getPassword());
+        String weightText = registerWeightField.getText().trim();
+        String goal = registerGoalField.getText().trim();
+
+        double weight;
+        try {
+            weight = Double.parseDouble(weightText);
+        } catch (NumberFormatException e) {
+            showError("Enter a valid current weight.");
+            return;
+        }
+
+        ServiceResult<Void> result = authService.registerUser(username, password, weight, goal);
+        if (!result.isSuccess()) {
+            showError(result.getMessage());
+            return;
+        }
+
+        registerUsernameField.setText("");
+        registerPasswordField.setText("");
+        registerWeightField.setText("");
+        registerGoalField.setText("");
+        showInfo(result.getMessage());
+        showLoginCard();
+    }
+
+    private void handleLogout() {
+        currentUser = null;
+        loginUsernameField.setText("");
+        loginPasswordField.setText("");
+        showLoginCard();
+        clearTable();
+    }
+
+    private void handleAddWorkout() {
+        if (currentUser == null) {
+            return;
+        }
+
+        List<Exercise> exercises = workoutService.getAllExercises();
+        if (exercises.isEmpty()) {
+            showError("No exercises are available.");
+            return;
+        }
+
+        WorkoutDialog.WorkoutFormResult formResult = WorkoutDialog.showAddWorkoutDialog(frame, exercises);
+        if (formResult == null) {
+            return;
+        }
+
+        ServiceResult<Void> saveResult = workoutService.addWorkoutLog(
+                currentUser.getUserId(),
+                formResult.getExercise().getExerciseId(),
+                formResult.getSets(),
+                formResult.getReps(),
+                formResult.getWeightLifted()
+        );
+
+        if (!saveResult.isSuccess()) {
+            showError(saveResult.getMessage());
+            return;
+        }
+
+        showInfo(saveResult.getMessage());
+        refreshDashboard();
+    }
+
+    private void handleViewAll() {
+        if (currentUser == null) {
+            return;
+        }
+
+        populateWorkoutTable(workoutService.getAllWorkoutLogsByUserId(currentUser.getUserId()));
+    }
+
+    private void handleViewRecent() {
+        if (currentUser == null) {
+            return;
+        }
+
+        populateWorkoutTable(workoutService.getRecentWorkoutLogsByUserId(currentUser.getUserId()));
+    }
+
+    private void handleDateRange() {
+        if (currentUser == null) {
+            return;
+        }
+
+        WorkoutDialog.DateRangeResult dateRangeResult = WorkoutDialog.showDateRangeDialog(frame);
+        if (dateRangeResult == null) {
+            return;
+        }
+
+        LocalDate startDate;
+        LocalDate endDate;
+        try {
+            startDate = LocalDate.parse(dateRangeResult.getStartDate());
+            endDate = LocalDate.parse(dateRangeResult.getEndDate());
+        } catch (DateTimeParseException e) {
+            showError("Use the date format yyyy-mm-dd.");
+            return;
+        }
+
+        ServiceResult<List<Workout>> result = workoutService.getWorkoutLogsByDateRange(currentUser.getUserId(), startDate, endDate);
+        if (!result.isSuccess()) {
+            showError(result.getMessage());
+            return;
+        }
+
+        populateWorkoutTable(result.getData());
+    }
+
+    private void refreshDashboard() {
+        if (currentUser == null) {
+            return;
+        }
+
+        welcomeLabel.setText("Welcome, " + currentUser.getUsername());
+        updateWorkoutCount();
+        handleViewAll();
+    }
+
+    private void updateWorkoutCount() {
+        if (currentUser == null) {
+            workoutCountValueLabel.setText("0");
+            return;
+        }
+
+        workoutCountValueLabel.setText(String.valueOf(workoutService.getTotalWorkoutCountByUserId(currentUser.getUserId())));
+    }
+
+    private void populateWorkoutTable(List<Workout> workouts) {
+        workoutTableModel.setRowCount(0);
+        exerciseNameCache.clear();
+        loadExerciseNames();
+
+        if (workouts == null || workouts.isEmpty()) {
+            return;
+        }
+
+        for (Workout workout : workouts) {
+            workoutTableModel.addRow(new Object[]{
+                    workout.getLogId(),
+                    resolveExerciseName(workout.getExerciseId()),
+                    workout.getSets(),
+                    workout.getReps(),
+                    String.format("%.2f", workout.getWeightLifted()),
+                    workout.getLogDate() == null ? "" : workout.getLogDate().toString()
+            });
+        }
+    }
+
+    private void loadExerciseNames() {
+        List<Exercise> exercises = workoutService.getAllExercises();
+        for (Exercise exercise : exercises) {
+            exerciseNameCache.put(exercise.getExerciseId(), exercise.getExerciseName());
+        }
+    }
+
+    private String resolveExerciseName(int exerciseId) {
+        return exerciseNameCache.getOrDefault(exerciseId, "Exercise #" + exerciseId);
+    }
+
+    private void clearTable() {
+        workoutTableModel.setRowCount(0);
+    }
+
+    private void showLoginCard() {
+        ((CardLayout) authPanel.getLayout()).show(authPanel, LOGIN_CARD);
+        ((CardLayout) rootPanel.getLayout()).show(rootPanel, LOGIN_CARD);
+    }
+
+    private void showRegisterCard() {
+        ((CardLayout) authPanel.getLayout()).show(authPanel, REGISTER_CARD);
+        ((CardLayout) rootPanel.getLayout()).show(rootPanel, LOGIN_CARD);
+    }
+
+    private void showDashboardCard() {
+        ((CardLayout) rootPanel.getLayout()).show(rootPanel, DASHBOARD_CARD);
+    }
+
+    private void showInfo(String message) {
+        JOptionPane.showMessageDialog(frame, message, "Information", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showError(String message) {
+        JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
