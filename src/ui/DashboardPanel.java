@@ -22,6 +22,7 @@ public class DashboardPanel extends JPanel {
             Runnable onAddWorkout,
             Runnable onEditWorkout,
             Runnable onDeleteWorkout,
+            Runnable onManagePlans,
             Runnable onViewAll,
             Runnable onViewRecent,
             Runnable onDateRange,
@@ -55,6 +56,9 @@ public class DashboardPanel extends JPanel {
         JButton deleteWorkoutButton = new JButton("Delete Selected");
         deleteWorkoutButton.addActionListener(e -> onDeleteWorkout.run());
 
+        JButton plansButton = new JButton("Plans");
+        plansButton.addActionListener(e -> onManagePlans.run());
+
         JButton showAllButton = new JButton("View All");
         showAllButton.addActionListener(e -> onViewAll.run());
 
@@ -73,6 +77,7 @@ public class DashboardPanel extends JPanel {
         actions.add(addWorkoutButton);
         actions.add(editWorkoutButton);
         actions.add(deleteWorkoutButton);
+        actions.add(plansButton);
         actions.add(showAllButton);
         actions.add(recentButton);
         actions.add(rangeButton);

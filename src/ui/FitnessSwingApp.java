@@ -1,6 +1,8 @@
 package ui;
 
 import database.ExerciseDAO;
+import database.WorkoutPlanDAO;
+import database.WorkoutPlanItemDAO;
 import database.UserDAO;
 import database.WorkoutDAO;
 import java.awt.CardLayout;
@@ -10,6 +12,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JPasswordField;
 import javax.swing.JLabel;
@@ -24,8 +27,11 @@ import javax.swing.table.DefaultTableModel;
 import models.Exercise;
 import models.User;
 import models.Workout;
+import models.WorkoutPlan;
+import models.WorkoutPlanItem;
 import services.AuthService;
 import services.ServiceResult;
+import services.WorkoutPlanService;
 import services.WorkoutService;
 
 public class FitnessSwingApp {
@@ -39,6 +45,7 @@ public class FitnessSwingApp {
 
     private final AuthService authService = new AuthService(new UserDAO());
     private final WorkoutService workoutService = new WorkoutService(new ExerciseDAO(), new WorkoutDAO());
+    private final WorkoutPlanService workoutPlanService = new WorkoutPlanService(new WorkoutPlanDAO(), new WorkoutPlanItemDAO());
 
     private final JTextField loginUsernameField = new JTextField(18);
     private final JPasswordField loginPasswordField = new JPasswordField(18);
@@ -104,8 +111,9 @@ public class FitnessSwingApp {
                 workoutCountValueLabel,
                 workoutTable,
                 this::handleAddWorkout,
-            this::handleEditWorkout,
-            this::handleDeleteWorkout,
+                this::handleEditWorkout,
+                this::handleDeleteWorkout,
+                this::handleManagePlans,
                 this::handleViewAll,
                 this::handleViewRecent,
                 this::handleDateRange,
@@ -275,6 +283,209 @@ public class FitnessSwingApp {
 
         showInfo(deleteResult.getMessage());
         refreshDashboard();
+    }
+
+    private void handleManagePlans() {
+        if (currentUser == null) {
+            return;
+        }
+
+        Object[] options = {"View Plans", "Create Plan", "Add Item to Plan", "Delete Plan", "Close"};
+        while (true) {
+            int choice = JOptionPane.showOptionDialog(
+                    frame,
+                    "Manage workout plans",
+                    "Workout Plans",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    options,
+                    options[0]
+            );
+
+            if (choice == 0) {
+                handleViewPlans();
+            } else if (choice == 1) {
+                handleCreatePlan();
+            } else if (choice == 2) {
+                handleAddPlanItem();
+            } else if (choice == 3) {
+                handleDeletePlan();
+            } else {
+                return;
+            }
+        }
+    }
+
+    private void handleCreatePlan() {
+        WorkoutDialog.PlanFormResult formResult = WorkoutDialog.showCreatePlanDialog(frame);
+        if (formResult == null) {
+            return;
+        }
+
+        ServiceResult<WorkoutPlan> result = workoutPlanService.createPlan(
+                currentUser.getUserId(),
+                formResult.getPlanName(),
+                formResult.getDescription()
+        );
+
+        if (!result.isSuccess()) {
+            showError(result.getMessage());
+            return;
+        }
+
+        showInfo(result.getMessage());
+    }
+
+    private void handleViewPlans() {
+        List<WorkoutPlan> plans = workoutPlanService.getPlansByUserId(currentUser.getUserId());
+        if (plans.isEmpty()) {
+            showInfo("No workout plans available.");
+            return;
+        }
+
+        exerciseNameCache.clear();
+        loadExerciseNames();
+
+        StringBuilder builder = new StringBuilder();
+        for (WorkoutPlan plan : plans) {
+            builder.append("Plan #")
+                    .append(plan.getPlanId())
+                    .append(" - ")
+                    .append(plan.getPlanName())
+                    .append("\n");
+
+            if (plan.getPlanDescription() != null && !plan.getPlanDescription().isBlank()) {
+                builder.append("Description: ").append(plan.getPlanDescription()).append("\n");
+            }
+
+            ServiceResult<List<WorkoutPlanItem>> itemsResult = workoutPlanService.getPlanItemsByPlanIdForUser(
+                    currentUser.getUserId(),
+                    plan.getPlanId()
+            );
+
+            if (itemsResult.isSuccess() && itemsResult.getData() != null && !itemsResult.getData().isEmpty()) {
+                for (WorkoutPlanItem item : itemsResult.getData()) {
+                    builder.append("  ")
+                            .append(item.getSortOrder())
+                            .append(". ")
+                            .append(resolveExerciseName(item.getExerciseId()))
+                            .append(" - ")
+                            .append(item.getTargetSets())
+                            .append("x")
+                            .append(item.getTargetReps())
+                            .append(" @ ")
+                            .append(String.format("%.2f", item.getTargetWeight()))
+                            .append(" kg\n");
+                }
+            } else {
+                builder.append("  (No items yet)\n");
+            }
+
+            builder.append("\n");
+        }
+
+        JOptionPane.showMessageDialog(frame, builder.toString(), "Workout Plans", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void handleAddPlanItem() {
+        List<WorkoutPlan> plans = workoutPlanService.getPlansByUserId(currentUser.getUserId());
+        if (plans.isEmpty()) {
+            showError("Create a workout plan first.");
+            return;
+        }
+
+        WorkoutPlan selectedPlan = selectPlan(plans, "Select a plan");
+        if (selectedPlan == null) {
+            return;
+        }
+
+        List<Exercise> exercises = workoutService.getAllExercises();
+        if (exercises.isEmpty()) {
+            showError("No exercises are available.");
+            return;
+        }
+
+        ServiceResult<List<WorkoutPlanItem>> itemsResult = workoutPlanService.getPlanItemsByPlanIdForUser(
+                currentUser.getUserId(),
+                selectedPlan.getPlanId()
+        );
+        int nextSortOrder = 1;
+        if (itemsResult.isSuccess() && itemsResult.getData() != null) {
+            nextSortOrder = itemsResult.getData().size() + 1;
+        }
+
+        WorkoutDialog.PlanItemFormResult itemFormResult = WorkoutDialog.showAddPlanItemDialog(frame, exercises, nextSortOrder);
+        if (itemFormResult == null) {
+            return;
+        }
+
+        ServiceResult<Void> addItemResult = workoutPlanService.addPlanItem(
+                currentUser.getUserId(),
+                selectedPlan.getPlanId(),
+                itemFormResult.getExercise().getExerciseId(),
+                itemFormResult.getTargetSets(),
+                itemFormResult.getTargetReps(),
+                itemFormResult.getTargetWeight(),
+                itemFormResult.getSortOrder()
+        );
+
+        if (!addItemResult.isSuccess()) {
+            showError(addItemResult.getMessage());
+            return;
+        }
+
+        showInfo(addItemResult.getMessage());
+    }
+
+    private void handleDeletePlan() {
+        List<WorkoutPlan> plans = workoutPlanService.getPlansByUserId(currentUser.getUserId());
+        if (plans.isEmpty()) {
+            showError("No workout plans available to delete.");
+            return;
+        }
+
+        WorkoutPlan selectedPlan = selectPlan(plans, "Select a plan to delete");
+        if (selectedPlan == null) {
+            return;
+        }
+
+        int confirmation = JOptionPane.showConfirmDialog(
+                frame,
+                "Delete plan '" + selectedPlan.getPlanName() + "'?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+        if (confirmation != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        ServiceResult<Void> result = workoutPlanService.deletePlan(currentUser.getUserId(), selectedPlan.getPlanId());
+        if (!result.isSuccess()) {
+            showError(result.getMessage());
+            return;
+        }
+
+        showInfo(result.getMessage());
+    }
+
+    private WorkoutPlan selectPlan(List<WorkoutPlan> plans, String title) {
+        JComboBox<WorkoutPlan> planComboBox = new JComboBox<>(plans.toArray(new WorkoutPlan[0]));
+
+        int result = JOptionPane.showConfirmDialog(
+                frame,
+                planComboBox,
+                title,
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        return (WorkoutPlan) planComboBox.getSelectedItem();
     }
 
     private void handleViewAll() {

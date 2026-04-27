@@ -129,6 +129,71 @@ public class WorkoutDialog {
         );
     }
 
+    public static PlanFormResult showCreatePlanDialog(Component parent) {
+        JTextField nameField = new JTextField(18);
+        JTextField descriptionField = new JTextField(18);
+
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = baseConstraints();
+        addLabeledField(panel, gbc, 0, "Plan Name", nameField);
+        addLabeledField(panel, gbc, 1, "Description", descriptionField);
+
+        int result = JOptionPane.showConfirmDialog(
+                parent,
+                panel,
+                "Create Workout Plan",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        return new PlanFormResult(nameField.getText().trim(), descriptionField.getText().trim());
+    }
+
+    public static PlanItemFormResult showAddPlanItemDialog(Component parent, List<Exercise> exercises, int defaultSortOrder) {
+        JComboBox<Exercise> exerciseBox = new JComboBox<>(exercises.toArray(new Exercise[0]));
+        JSpinner setsSpinner = new JSpinner(new SpinnerNumberModel(3, 1, 1000, 1));
+        JSpinner repsSpinner = new JSpinner(new SpinnerNumberModel(10, 1, 1000, 1));
+        JSpinner weightSpinner = new JSpinner(new SpinnerNumberModel(0.0d, 0.0d, 1000.0d, 2.5d));
+        JSpinner sortOrderSpinner = new JSpinner(new SpinnerNumberModel(defaultSortOrder, 1, 1000, 1));
+
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = baseConstraints();
+        addLabeledField(panel, gbc, 0, "Exercise", exerciseBox);
+        addLabeledField(panel, gbc, 1, "Target Sets", setsSpinner);
+        addLabeledField(panel, gbc, 2, "Target Reps", repsSpinner);
+        addLabeledField(panel, gbc, 3, "Target Weight (kg)", weightSpinner);
+        addLabeledField(panel, gbc, 4, "Sort Order", sortOrderSpinner);
+
+        int result = JOptionPane.showConfirmDialog(
+                parent,
+                panel,
+                "Add Plan Item",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        Exercise selectedExercise = (Exercise) exerciseBox.getSelectedItem();
+        if (selectedExercise == null) {
+            return null;
+        }
+
+        return new PlanItemFormResult(
+                selectedExercise,
+                ((Number) setsSpinner.getValue()).intValue(),
+                ((Number) repsSpinner.getValue()).intValue(),
+                ((Number) weightSpinner.getValue()).doubleValue(),
+                ((Number) sortOrderSpinner.getValue()).intValue()
+        );
+    }
+
     private static GridBagConstraints baseConstraints() {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -198,6 +263,60 @@ public class WorkoutDialog {
 
         public String getEndDate() {
             return endDate;
+        }
+    }
+
+    public static final class PlanFormResult {
+        private final String planName;
+        private final String description;
+
+        public PlanFormResult(String planName, String description) {
+            this.planName = planName;
+            this.description = description;
+        }
+
+        public String getPlanName() {
+            return planName;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    public static final class PlanItemFormResult {
+        private final Exercise exercise;
+        private final int targetSets;
+        private final int targetReps;
+        private final double targetWeight;
+        private final int sortOrder;
+
+        public PlanItemFormResult(Exercise exercise, int targetSets, int targetReps, double targetWeight, int sortOrder) {
+            this.exercise = exercise;
+            this.targetSets = targetSets;
+            this.targetReps = targetReps;
+            this.targetWeight = targetWeight;
+            this.sortOrder = sortOrder;
+        }
+
+        public Exercise getExercise() {
+            return exercise;
+        }
+
+        public int getTargetSets() {
+            return targetSets;
+        }
+
+        public int getTargetReps() {
+            return targetReps;
+        }
+
+        public double getTargetWeight() {
+            return targetWeight;
+        }
+
+        public int getSortOrder() {
+            return sortOrder;
         }
     }
 }
