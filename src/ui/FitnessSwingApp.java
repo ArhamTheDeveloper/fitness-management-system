@@ -11,10 +11,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.JFrame;
+import javax.swing.JPasswordField;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.table.DefaultTableModel;
@@ -37,13 +40,13 @@ public class FitnessSwingApp {
     private final AuthService authService = new AuthService(new UserDAO());
     private final WorkoutService workoutService = new WorkoutService(new ExerciseDAO(), new WorkoutDAO());
 
-    private final javax.swing.JTextField loginUsernameField = new javax.swing.JTextField(18);
-    private final javax.swing.JPasswordField loginPasswordField = new javax.swing.JPasswordField(18);
+    private final JTextField loginUsernameField = new JTextField(18);
+    private final JPasswordField loginPasswordField = new JPasswordField(18);
 
-    private final javax.swing.JTextField registerUsernameField = new javax.swing.JTextField(18);
-    private final javax.swing.JPasswordField registerPasswordField = new javax.swing.JPasswordField(18);
-    private final javax.swing.JTextField registerWeightField = new javax.swing.JTextField(18);
-    private final javax.swing.JTextField registerGoalField = new javax.swing.JTextField(18);
+    private final JTextField registerUsernameField = new JTextField(18);
+    private final JPasswordField registerPasswordField = new JPasswordField(18);
+    private final JTextField registerWeightField = new JTextField(18);
+    private final JTextField registerGoalField = new JTextField(18);
 
     private final JLabel welcomeLabel = new JLabel("Welcome");
     private final JLabel workoutCountValueLabel = new JLabel("0");
@@ -94,11 +97,15 @@ public class FitnessSwingApp {
     }
 
     private JPanel buildDashboardPanel() {
+        workoutTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
         return new DashboardPanel(
                 welcomeLabel,
                 workoutCountValueLabel,
                 workoutTable,
                 this::handleAddWorkout,
+            this::handleEditWorkout,
+            this::handleDeleteWorkout,
                 this::handleViewAll,
                 this::handleViewRecent,
                 this::handleDateRange,
@@ -189,6 +196,84 @@ public class FitnessSwingApp {
         }
 
         showInfo(saveResult.getMessage());
+        refreshDashboard();
+    }
+
+    private void handleEditWorkout() {
+        if (currentUser == null) {
+            return;
+        }
+
+        int selectedLogId = getSelectedLogId();
+        if (selectedLogId <= 0) {
+            showError("Select a workout row to edit.");
+            return;
+        }
+
+        ServiceResult<Workout> workoutResult = workoutService.getWorkoutLogByIdForUser(currentUser.getUserId(), selectedLogId);
+        if (!workoutResult.isSuccess()) {
+            showError(workoutResult.getMessage());
+            return;
+        }
+
+        List<Exercise> exercises = workoutService.getAllExercises();
+        if (exercises.isEmpty()) {
+            showError("No exercises are available.");
+            return;
+        }
+
+        WorkoutDialog.WorkoutFormResult formResult = WorkoutDialog.showEditWorkoutDialog(frame, exercises, workoutResult.getData());
+        if (formResult == null) {
+            return;
+        }
+
+        ServiceResult<Void> updateResult = workoutService.updateWorkoutLog(
+                currentUser.getUserId(),
+                selectedLogId,
+                formResult.getExercise().getExerciseId(),
+                formResult.getSets(),
+                formResult.getReps(),
+                formResult.getWeightLifted()
+        );
+
+        if (!updateResult.isSuccess()) {
+            showError(updateResult.getMessage());
+            return;
+        }
+
+        showInfo(updateResult.getMessage());
+        refreshDashboard();
+    }
+
+    private void handleDeleteWorkout() {
+        if (currentUser == null) {
+            return;
+        }
+
+        int selectedLogId = getSelectedLogId();
+        if (selectedLogId <= 0) {
+            showError("Select a workout row to delete.");
+            return;
+        }
+
+        int confirmation = JOptionPane.showConfirmDialog(
+                frame,
+                "Delete selected workout log?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+        if (confirmation != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        ServiceResult<Void> deleteResult = workoutService.deleteWorkoutLog(currentUser.getUserId(), selectedLogId);
+        if (!deleteResult.isSuccess()) {
+            showError(deleteResult.getMessage());
+            return;
+        }
+
+        showInfo(deleteResult.getMessage());
         refreshDashboard();
     }
 
@@ -286,6 +371,24 @@ public class FitnessSwingApp {
 
     private String resolveExerciseName(int exerciseId) {
         return exerciseNameCache.getOrDefault(exerciseId, "Exercise #" + exerciseId);
+    }
+
+    private int getSelectedLogId() {
+        int selectedRow = workoutTable.getSelectedRow();
+        if (selectedRow < 0) {
+            return -1;
+        }
+
+        Object value = workoutTableModel.getValueAt(selectedRow, 0);
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 
     private void clearTable() {

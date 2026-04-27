@@ -42,3 +42,24 @@ INSERT INTO exercises (exercise_name, category) VALUES
 
 ALTER TABLE exercises
 MODIFY category ENUM('STRENGTH', 'CARDIO', 'FLEXIBILITY') NOT NULL;
+
+CREATE TABLE workout_plans (
+    plan_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    plan_name VARCHAR(100) NOT NULL,
+    plan_description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE workout_plan_items (
+    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    plan_id INT NOT NULL,
+    exercise_id INT NOT NULL,
+    target_sets INT NOT NULL,
+    target_reps INT NOT NULL,
+    target_weight DOUBLE DEFAULT 0,
+    sort_order INT DEFAULT 1,
+    FOREIGN KEY (plan_id) REFERENCES workout_plans(plan_id) ON DELETE CASCADE,
+    FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id)
+);

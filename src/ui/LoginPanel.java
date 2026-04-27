@@ -1,11 +1,14 @@
 package ui;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -23,12 +26,12 @@ public class LoginPanel extends JPanel {
         ));
 
         JPanel titlePanel = new JPanel();
-        titlePanel.setLayout(new javax.swing.BoxLayout(titlePanel, javax.swing.BoxLayout.Y_AXIS));
+        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
         JLabel titleLabel = new JLabel("FitnessMS", SwingConstants.LEFT);
         titleLabel.setFont(titleLabel.getFont().deriveFont(28f));
         JLabel subtitleLabel = new JLabel("Sign in to continue", SwingConstants.LEFT);
         titlePanel.add(titleLabel);
-        titlePanel.add(javax.swing.Box.createVerticalStrut(6));
+        titlePanel.add(Box.createVerticalStrut(6));
         titlePanel.add(subtitleLabel);
         add(titlePanel, BorderLayout.NORTH);
 
@@ -79,7 +82,7 @@ public class LoginPanel extends JPanel {
 
         gbc.gridx = 1;
         gbc.weightx = 1;
-        field.setPreferredSize(new java.awt.Dimension(280, 30));
+        field.setPreferredSize(new Dimension(280, 30));
         form.add(field, gbc);
     }
 }

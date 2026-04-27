@@ -1,5 +1,7 @@
 package ui;
 
+import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -10,15 +12,17 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.JTextField;
 import models.Exercise;
+import models.Workout;
 
 public class WorkoutDialog {
-    public static WorkoutFormResult showAddWorkoutDialog(java.awt.Component parent, List<Exercise> exercises) {
+    public static WorkoutFormResult showAddWorkoutDialog(Component parent, List<Exercise> exercises) {
         JComboBox<Exercise> exerciseBox = new JComboBox<>(exercises.toArray(new Exercise[0]));
-        JSpinner setsSpinner = new JSpinner(new javax.swing.SpinnerNumberModel(1, 1, 100, 1));
-        JSpinner repsSpinner = new JSpinner(new javax.swing.SpinnerNumberModel(1, 1, 100, 1));
-        JSpinner weightSpinner = new JSpinner(new javax.swing.SpinnerNumberModel(0.0d, 0.0d, 1000.0d, 2.5d));
+        JSpinner setsSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+        JSpinner repsSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+        JSpinner weightSpinner = new JSpinner(new SpinnerNumberModel(0.0d, 0.0d, 1000.0d, 2.5d));
 
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = baseConstraints();
@@ -52,7 +56,7 @@ public class WorkoutDialog {
         );
     }
 
-    public static DateRangeResult showDateRangeDialog(java.awt.Component parent) {
+    public static DateRangeResult showDateRangeDialog(Component parent) {
         JTextField startField = new JTextField(16);
         JTextField endField = new JTextField(16);
 
@@ -76,6 +80,55 @@ public class WorkoutDialog {
         return new DateRangeResult(startField.getText().trim(), endField.getText().trim());
     }
 
+    public static WorkoutFormResult showEditWorkoutDialog(Component parent, List<Exercise> exercises, Workout workout) {
+        if (workout == null) {
+            return null;
+        }
+
+        JComboBox<Exercise> exerciseBox = new JComboBox<>(exercises.toArray(new Exercise[0]));
+        JSpinner setsSpinner = new JSpinner(new SpinnerNumberModel(workout.getSets(), 1, 1000, 1));
+        JSpinner repsSpinner = new JSpinner(new SpinnerNumberModel(workout.getReps(), 1, 1000, 1));
+        JSpinner weightSpinner = new JSpinner(new SpinnerNumberModel(workout.getWeightLifted(), 0.0d, 1000.0d, 2.5d));
+
+        for (Exercise exercise : exercises) {
+            if (exercise.getExerciseId() == workout.getExerciseId()) {
+                exerciseBox.setSelectedItem(exercise);
+                break;
+            }
+        }
+
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = baseConstraints();
+        addLabeledField(panel, gbc, 0, "Exercise", exerciseBox);
+        addLabeledField(panel, gbc, 1, "Sets", setsSpinner);
+        addLabeledField(panel, gbc, 2, "Reps", repsSpinner);
+        addLabeledField(panel, gbc, 3, "Weight Lifted (kg)", weightSpinner);
+
+        int result = JOptionPane.showConfirmDialog(
+                parent,
+                panel,
+                "Edit Workout Log",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        Exercise selectedExercise = (Exercise) exerciseBox.getSelectedItem();
+        if (selectedExercise == null) {
+            return null;
+        }
+
+        return new WorkoutFormResult(
+                selectedExercise,
+                ((Number) setsSpinner.getValue()).intValue(),
+                ((Number) repsSpinner.getValue()).intValue(),
+                ((Number) weightSpinner.getValue()).doubleValue()
+        );
+    }
+
     private static GridBagConstraints baseConstraints() {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -96,7 +149,7 @@ public class WorkoutDialog {
 
         gbc.gridx = 1;
         gbc.weightx = 1;
-        field.setPreferredSize(new java.awt.Dimension(280, 30));
+        field.setPreferredSize(new Dimension(280, 30));
         form.add(field, gbc);
     }
 
