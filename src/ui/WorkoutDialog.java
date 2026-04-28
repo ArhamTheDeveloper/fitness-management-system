@@ -319,4 +319,92 @@ public class WorkoutDialog {
             return sortOrder;
         }
     }
+
+    public static ProgressFormResult showLogProgressDialog(Component parent) {
+        JSpinner weightSpinner = new JSpinner(new SpinnerNumberModel(0.0d, 0.0d, 500.0d, 0.1d));
+        JSpinner bodyFatSpinner = new JSpinner(new SpinnerNumberModel(0.0d, 0.0d, 100.0d, 0.5d));
+        JSpinner chestSpinner = new JSpinner(new SpinnerNumberModel(0.0d, 0.0d, 200.0d, 0.5d));
+        JSpinner waistSpinner = new JSpinner(new SpinnerNumberModel(0.0d, 0.0d, 200.0d, 0.5d));
+        JSpinner hipsSpinner = new JSpinner(new SpinnerNumberModel(0.0d, 0.0d, 200.0d, 0.5d));
+        JTextField notesField = new JTextField(18);
+
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = baseConstraints();
+        addLabeledField(panel, gbc, 0, "Weight (kg)", weightSpinner);
+        addLabeledField(panel, gbc, 1, "Body Fat %", bodyFatSpinner);
+        addLabeledField(panel, gbc, 2, "Chest (cm)", chestSpinner);
+        addLabeledField(panel, gbc, 3, "Waist (cm)", waistSpinner);
+        addLabeledField(panel, gbc, 4, "Hips (cm)", hipsSpinner);
+        addLabeledField(panel, gbc, 5, "Notes", notesField);
+
+        int result = JOptionPane.showConfirmDialog(
+                parent,
+                panel,
+                "Log Progress",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        Double weight = ((Number) weightSpinner.getValue()).doubleValue();
+        Double bodyFat = ((Number) bodyFatSpinner.getValue()).doubleValue();
+        Double chest = ((Number) chestSpinner.getValue()).doubleValue();
+        Double waist = ((Number) waistSpinner.getValue()).doubleValue();
+        Double hips = ((Number) hipsSpinner.getValue()).doubleValue();
+        String notes = notesField.getText().trim();
+
+        return new ProgressFormResult(
+                weight > 0 ? weight : null,
+                bodyFat > 0 ? bodyFat : null,
+                chest > 0 ? chest : null,
+                waist > 0 ? waist : null,
+                hips > 0 ? hips : null,
+                notes.isEmpty() ? null : notes
+        );
+    }
+
+    public static final class ProgressFormResult {
+        private final Double weight;
+        private final Double bodyFatPercentage;
+        private final Double chestCm;
+        private final Double waistCm;
+        private final Double hipsCm;
+        private final String notes;
+
+        public ProgressFormResult(Double weight, Double bodyFatPercentage, Double chestCm, Double waistCm, Double hipsCm, String notes) {
+            this.weight = weight;
+            this.bodyFatPercentage = bodyFatPercentage;
+            this.chestCm = chestCm;
+            this.waistCm = waistCm;
+            this.hipsCm = hipsCm;
+            this.notes = notes;
+        }
+
+        public Double getWeight() {
+            return weight;
+        }
+
+        public Double getBodyFatPercentage() {
+            return bodyFatPercentage;
+        }
+
+        public Double getChestCm() {
+            return chestCm;
+        }
+
+        public Double getWaistCm() {
+            return waistCm;
+        }
+
+        public Double getHipsCm() {
+            return hipsCm;
+        }
+
+        public String getNotes() {
+            return notes;
+        }
+    }
 }

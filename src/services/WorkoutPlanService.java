@@ -45,6 +45,14 @@ public class WorkoutPlanService {
         return workoutPlanDAO.getWorkoutPlansByUserId(userId);
     }
 
+    public int getTotalPlansCountByUserId(int userId) {
+        if (userId <= 0) {
+            return 0;
+        }
+
+        return workoutPlanDAO.getWorkoutPlansByUserId(userId).size();
+    }
+
     public ServiceResult<WorkoutPlan> getPlanByIdForUser(int userId, int planId) {
         if (userId <= 0) {
             return ServiceResult.failure("Invalid user session.");

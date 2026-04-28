@@ -141,4 +141,12 @@ public class WorkoutService {
     public int getTotalWorkoutCountByUserId(int userId) {
         return workoutDAO.getTotalWorkoutCountByUserId(userId);
     }
+
+    public int getWorkoutCountByUserIdSince(int userId, Timestamp since) {
+        if (userId <= 0 || since == null) {
+            return 0;
+        }
+
+        return workoutDAO.getWorkoutCountByUserIdSince(userId, since);
+    }
 }

@@ -1,17 +1,22 @@
 package ui;
 
 import database.ExerciseDAO;
+import database.ProgressEntryDAO;
 import database.WorkoutPlanDAO;
 import database.WorkoutPlanItemDAO;
 import database.UserDAO;
 import database.WorkoutDAO;
 import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatDarculaLaf;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JPasswordField;
@@ -25,11 +30,13 @@ import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.table.DefaultTableModel;
 import models.Exercise;
+import models.ProgressEntry;
 import models.User;
 import models.Workout;
 import models.WorkoutPlan;
 import models.WorkoutPlanItem;
 import services.AuthService;
+import services.ProgressService;
 import services.ServiceResult;
 import services.WorkoutPlanService;
 import services.WorkoutService;
@@ -46,6 +53,7 @@ public class FitnessSwingApp {
     private final AuthService authService = new AuthService(new UserDAO());
     private final WorkoutService workoutService = new WorkoutService(new ExerciseDAO(), new WorkoutDAO());
     private final WorkoutPlanService workoutPlanService = new WorkoutPlanService(new WorkoutPlanDAO(), new WorkoutPlanItemDAO());
+    private final ProgressService progressService = new ProgressService(new ProgressEntryDAO());
 
     private final JTextField loginUsernameField = new JTextField(18);
     private final JPasswordField loginPasswordField = new JPasswordField(18);
@@ -57,6 +65,9 @@ public class FitnessSwingApp {
 
     private final JLabel welcomeLabel = new JLabel("Welcome");
     private final JLabel workoutCountValueLabel = new JLabel("0");
+    private final JLabel weeklyWorkoutValueLabel = new JLabel("0");
+    private final JLabel plansCountValueLabel = new JLabel("0");
+    private final JLabel weightTrendValueLabel = new JLabel("-");
     private final DefaultTableModel workoutTableModel = new DefaultTableModel(
             new Object[]{"Log ID", "Exercise", "Sets", "Reps", "Weight (kg)", "Date"},
             0
@@ -88,13 +99,34 @@ public class FitnessSwingApp {
     }
 
     public void show() {
+        // Start the app maximized for better initial UX
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         frame.setVisible(true);
     }
 
     private void initializeLookAndFeel() {
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {
+            UIManager.setLookAndFeel(new FlatDarculaLaf());
+            UIManager.put("Label.foreground", Color.WHITE);
+            UIManager.put("Button.foreground", Color.WHITE);
+            UIManager.put("Button.background", new Color(75, 75, 75));
+            UIManager.put("Table.foreground", Color.WHITE);
+            UIManager.put("Table.background", new Color(43, 43, 43));
+            UIManager.put("Table.selectionForeground", Color.WHITE);
+            UIManager.put("TableHeader.foreground", Color.WHITE);
+            UIManager.put("TableHeader.background", new Color(60, 60, 60));
+            UIManager.put("Panel.background", new Color(43, 43, 43));
+            UIManager.put("ScrollPane.background", new Color(43, 43, 43));
+            UIManager.put("TextField.foreground", Color.WHITE);
+            UIManager.put("PasswordField.foreground", Color.WHITE);
+            UIManager.put("ComboBox.foreground", Color.WHITE);
+            UIManager.put("TitledBorder.titleColor", Color.WHITE);
+            UIManager.put("OptionPane.foreground", Color.WHITE);
+        } catch (Exception flatLafError) {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -109,11 +141,15 @@ public class FitnessSwingApp {
         return new DashboardPanel(
                 welcomeLabel,
                 workoutCountValueLabel,
+            weeklyWorkoutValueLabel,
+            plansCountValueLabel,
+            weightTrendValueLabel,
                 workoutTable,
                 this::handleAddWorkout,
                 this::handleEditWorkout,
                 this::handleDeleteWorkout,
                 this::handleManagePlans,
+                this::handleTrackProgress,
                 this::handleViewAll,
                 this::handleViewRecent,
                 this::handleDateRange,
@@ -170,6 +206,7 @@ public class FitnessSwingApp {
         currentUser = null;
         loginUsernameField.setText("");
         loginPasswordField.setText("");
+        updateSummaryMetrics();
         showLoginCard();
         clearTable();
     }
@@ -203,7 +240,11 @@ public class FitnessSwingApp {
             return;
         }
 
-        showInfo(saveResult.getMessage());
+        int todayCount = workoutService.getWorkoutCountByUserIdSince(
+                currentUser.getUserId(),
+                Timestamp.valueOf(LocalDate.now().atStartOfDay())
+        );
+        showInfo("Great work. Session saved. Today's workouts: " + todayCount);
         refreshDashboard();
     }
 
@@ -540,6 +581,7 @@ public class FitnessSwingApp {
 
         welcomeLabel.setText("Welcome, " + currentUser.getUsername());
         updateWorkoutCount();
+        updateSummaryMetrics();
         handleViewAll();
     }
 
@@ -550,6 +592,44 @@ public class FitnessSwingApp {
         }
 
         workoutCountValueLabel.setText(String.valueOf(workoutService.getTotalWorkoutCountByUserId(currentUser.getUserId())));
+    }
+
+    private void updateSummaryMetrics() {
+        if (currentUser == null) {
+            weeklyWorkoutValueLabel.setText("0");
+            plansCountValueLabel.setText("0");
+            weightTrendValueLabel.setText("-");
+            return;
+        }
+
+        Timestamp sevenDaysAgo = Timestamp.valueOf(LocalDate.now().minusDays(6).atStartOfDay());
+        int weeklyCount = workoutService.getWorkoutCountByUserIdSince(currentUser.getUserId(), sevenDaysAgo);
+        weeklyWorkoutValueLabel.setText(String.valueOf(weeklyCount));
+
+        int plansCount = workoutPlanService.getTotalPlansCountByUserId(currentUser.getUserId());
+        plansCountValueLabel.setText(String.valueOf(plansCount));
+
+        ServiceResult<List<ProgressEntry>> progressResult = progressService.getProgressEntriesByUserId(currentUser.getUserId());
+        if (!progressResult.isSuccess() || progressResult.getData() == null || progressResult.getData().size() < 2) {
+            weightTrendValueLabel.setText("No trend yet");
+            return;
+        }
+
+        ProgressEntry latest = progressResult.getData().get(0);
+        ProgressEntry previous = progressResult.getData().get(1);
+        if (latest.getWeight() == null || previous.getWeight() == null) {
+            weightTrendValueLabel.setText("No trend yet");
+            return;
+        }
+
+        double delta = latest.getWeight() - previous.getWeight();
+        if (Math.abs(delta) < 0.01d) {
+            weightTrendValueLabel.setText("No change");
+            return;
+        }
+
+        String direction = delta < 0 ? "Down" : "Up";
+        weightTrendValueLabel.setText(direction + " " + String.format("%.2f", Math.abs(delta)) + " kg");
     }
 
     private void populateWorkoutTable(List<Workout> workouts) {
@@ -626,5 +706,99 @@ public class FitnessSwingApp {
 
     private void showError(String message) {
         JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void handleTrackProgress() {
+        if (currentUser == null) {
+            return;
+        }
+
+        Object[] options = {"Log Progress", "View Progress History", "Close"};
+        while (true) {
+            int choice = JOptionPane.showOptionDialog(
+                    frame,
+                    "Progress Tracking",
+                    "Progress Tracking",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    options,
+                    options[0]
+            );
+
+            if (choice == 0) {
+                handleLogProgress();
+            } else if (choice == 1) {
+                handleViewProgressHistory();
+            } else {
+                return;
+            }
+        }
+    }
+
+    private void handleLogProgress() {
+        WorkoutDialog.ProgressFormResult formResult = WorkoutDialog.showLogProgressDialog(frame);
+        if (formResult == null) {
+            return;
+        }
+
+        ServiceResult<Void> result = progressService.logProgressEntry(
+                currentUser.getUserId(),
+                formResult.getWeight(),
+                formResult.getBodyFatPercentage(),
+                formResult.getChestCm(),
+                formResult.getWaistCm(),
+                formResult.getHipsCm(),
+                formResult.getNotes()
+        );
+
+        if (!result.isSuccess()) {
+            showError(result.getMessage());
+            return;
+        }
+
+        showInfo(result.getMessage());
+    }
+
+    private void handleViewProgressHistory() {
+        ServiceResult<List<ProgressEntry>> result = progressService.getProgressEntriesByUserId(currentUser.getUserId());
+        if (!result.isSuccess()) {
+            showError(result.getMessage());
+            return;
+        }
+
+        List<ProgressEntry> entries = result.getData();
+        if (entries == null || entries.isEmpty()) {
+            showInfo("No progress entries found.");
+            return;
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.append("Progress History (Latest First):\n\n");
+
+        for (ProgressEntry entry : entries) {
+            builder.append("Date: ").append(entry.getEntryDate()).append("\n");
+            if (entry.getWeight() != null) {
+                builder.append("  Weight: ").append(String.format("%.2f", entry.getWeight())).append(" kg\n");
+            }
+            if (entry.getBodyFatPercentage() != null) {
+                builder.append("  Body Fat: ").append(String.format("%.2f", entry.getBodyFatPercentage())).append(" %\n");
+            }
+            if (entry.getChestCm() != null) {
+                builder.append("  Chest: ").append(String.format("%.1f", entry.getChestCm())).append(" cm\n");
+            }
+            if (entry.getWaistCm() != null) {
+                builder.append("  Waist: ").append(String.format("%.1f", entry.getWaistCm())).append(" cm\n");
+            }
+            if (entry.getHipsCm() != null) {
+                builder.append("  Hips: ").append(String.format("%.1f", entry.getHipsCm())).append(" cm\n");
+            }
+            if (entry.getNotes() != null && !entry.getNotes().isEmpty()) {
+                builder.append("  Notes: ").append(entry.getNotes()).append("\n");
+            }
+            builder.append("\n");
+        }
+
+        JOptionPane.showMessageDialog(frame, builder.toString(), "Progress History", JOptionPane.INFORMATION_MESSAGE);
     }
 }

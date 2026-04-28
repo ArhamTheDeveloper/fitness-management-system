@@ -244,5 +244,31 @@ public class WorkoutDAO {
         return 0;
     }
 
+    public int getWorkoutCountByUserIdSince(int userId, Timestamp since) {
+        String sql = "SELECT COUNT(*) AS total FROM workout_logs WHERE user_id = ? AND log_date >= ?";
+
+        try {
+            Connection conn = DBConnection.getConnection();
+            if (conn == null) {
+                return 0;
+            }
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, userId);
+                stmt.setTimestamp(2, since);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getInt("total");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error fetching workout count by userId since timestamp: " + e.getMessage());
+        }
+
+        return 0;
+    }
+
 
 }

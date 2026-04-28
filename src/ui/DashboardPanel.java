@@ -1,7 +1,10 @@
 package ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -10,19 +13,28 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.SwingConstants;
 
 public class DashboardPanel extends JPanel {
     private final JLabel welcomeLabel;
     private final JLabel workoutCountValueLabel;
+    private final JLabel weeklyWorkoutValueLabel;
+    private final JLabel plansCountValueLabel;
+    private final JLabel weightTrendValueLabel;
 
     public DashboardPanel(
             JLabel welcomeLabel,
             JLabel workoutCountValueLabel,
+            JLabel weeklyWorkoutValueLabel,
+            JLabel plansCountValueLabel,
+            JLabel weightTrendValueLabel,
             JTable workoutTable,
             Runnable onAddWorkout,
             Runnable onEditWorkout,
             Runnable onDeleteWorkout,
             Runnable onManagePlans,
+            Runnable onTrackProgress,
             Runnable onViewAll,
             Runnable onViewRecent,
             Runnable onDateRange,
@@ -31,17 +43,28 @@ public class DashboardPanel extends JPanel {
     ) {
         this.welcomeLabel = welcomeLabel;
         this.workoutCountValueLabel = workoutCountValueLabel;
+        this.weeklyWorkoutValueLabel = weeklyWorkoutValueLabel;
+        this.plansCountValueLabel = plansCountValueLabel;
+        this.weightTrendValueLabel = weightTrendValueLabel;
+
+        this.welcomeLabel.setForeground(Color.WHITE);
+        this.workoutCountValueLabel.setForeground(Color.WHITE);
+        this.weeklyWorkoutValueLabel.setForeground(Color.WHITE);
+        this.plansCountValueLabel.setForeground(Color.WHITE);
+        this.weightTrendValueLabel.setForeground(Color.WHITE);
 
         setLayout(new BorderLayout(16, 16));
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         JPanel header = new JPanel(new BorderLayout(12, 12));
         welcomeLabel.setFont(welcomeLabel.getFont().deriveFont(24f));
+        welcomeLabel.setForeground(Color.WHITE);
 
         JPanel summary = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
-        summary.add(new JLabel("Workout Logs:"));
-        workoutCountValueLabel.setFont(workoutCountValueLabel.getFont().deriveFont(18f));
-        summary.add(workoutCountValueLabel);
+        summary.add(metricCard("Total Logs", workoutCountValueLabel));
+        summary.add(metricCard("This Week", weeklyWorkoutValueLabel));
+        summary.add(metricCard("Plans", plansCountValueLabel));
+        summary.add(metricCard("Weight Trend", weightTrendValueLabel));
 
         header.add(welcomeLabel, BorderLayout.NORTH);
         header.add(summary, BorderLayout.SOUTH);
@@ -58,6 +81,9 @@ public class DashboardPanel extends JPanel {
 
         JButton plansButton = new JButton("Plans");
         plansButton.addActionListener(e -> onManagePlans.run());
+
+        JButton progressButton = new JButton("Progress");
+        progressButton.addActionListener(e -> onTrackProgress.run());
 
         JButton showAllButton = new JButton("View All");
         showAllButton.addActionListener(e -> onViewAll.run());
@@ -78,6 +104,7 @@ public class DashboardPanel extends JPanel {
         actions.add(editWorkoutButton);
         actions.add(deleteWorkoutButton);
         actions.add(plansButton);
+        actions.add(progressButton);
         actions.add(showAllButton);
         actions.add(recentButton);
         actions.add(rangeButton);
@@ -91,6 +118,15 @@ public class DashboardPanel extends JPanel {
         topSection.add(actions);
 
         workoutTable.setRowHeight(26);
+        // Ensure table header text is visible on dark theme
+        DefaultTableCellRenderer headerRenderer = (DefaultTableCellRenderer) workoutTable.getTableHeader().getDefaultRenderer();
+        headerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        headerRenderer.setForeground(Color.WHITE);
+        headerRenderer.setBackground(new Color(60, 60, 60));
+        headerRenderer.setFont(headerRenderer.getFont().deriveFont(Font.BOLD));
+        workoutTable.getTableHeader().setDefaultRenderer(headerRenderer);
+        workoutTable.getTableHeader().setOpaque(true);
+        workoutTable.getTableHeader().setReorderingAllowed(false);
         JScrollPane scrollPane = new JScrollPane(workoutTable);
         scrollPane.setBorder(BorderFactory.createTitledBorder("Workout Logs"));
 
@@ -104,5 +140,22 @@ public class DashboardPanel extends JPanel {
 
     public void setWorkoutCount(int count) {
         workoutCountValueLabel.setText(String.valueOf(count));
+    }
+
+    private JPanel metricCard(String title, JLabel valueLabel) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEtchedBorder(),
+                BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+
+        JLabel titleLabel = new JLabel(title, SwingConstants.LEFT);
+        titleLabel.setForeground(Color.WHITE);
+        valueLabel.setFont(valueLabel.getFont().deriveFont(18f));
+        valueLabel.setForeground(Color.WHITE);
+
+        card.add(titleLabel, BorderLayout.NORTH);
+        card.add(valueLabel, BorderLayout.SOUTH);
+        return card;
     }
 }

@@ -63,3 +63,16 @@ CREATE TABLE workout_plan_items (
     FOREIGN KEY (plan_id) REFERENCES workout_plans(plan_id) ON DELETE CASCADE,
     FOREIGN KEY (exercise_id) REFERENCES exercises(exercise_id)
 );
+
+CREATE TABLE progress_entries (
+    entry_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    weight DOUBLE,
+    body_fat_percentage DOUBLE,
+    chest_cm DOUBLE,
+    waist_cm DOUBLE,
+    hips_cm DOUBLE,
+    notes VARCHAR(255),
+    entry_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);

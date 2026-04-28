@@ -6,6 +6,7 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Color;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -29,7 +30,9 @@ public class LoginPanel extends JPanel {
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
         JLabel titleLabel = new JLabel("FitnessMS", SwingConstants.LEFT);
         titleLabel.setFont(titleLabel.getFont().deriveFont(28f));
+        titleLabel.setForeground(Color.WHITE);
         JLabel subtitleLabel = new JLabel("Sign in to continue", SwingConstants.LEFT);
+        subtitleLabel.setForeground(Color.WHITE);
         titlePanel.add(titleLabel);
         titlePanel.add(Box.createVerticalStrut(6));
         titlePanel.add(subtitleLabel);
@@ -73,6 +76,7 @@ public class LoginPanel extends JPanel {
 
     private void addLabeledField(JPanel form, GridBagConstraints gbc, int row, String labelText, JComponent field) {
         JLabel label = new JLabel(labelText);
+        label.setForeground(Color.WHITE);
 
         gbc.gridx = 0;
         gbc.gridy = row;
