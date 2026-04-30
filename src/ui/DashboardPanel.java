@@ -2,7 +2,6 @@ package ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import javax.swing.BorderFactory;
@@ -47,18 +46,18 @@ public class DashboardPanel extends JPanel {
         this.plansCountValueLabel = plansCountValueLabel;
         this.weightTrendValueLabel = weightTrendValueLabel;
 
-        this.welcomeLabel.setForeground(Color.WHITE);
-        this.workoutCountValueLabel.setForeground(Color.WHITE);
-        this.weeklyWorkoutValueLabel.setForeground(Color.WHITE);
-        this.plansCountValueLabel.setForeground(Color.WHITE);
-        this.weightTrendValueLabel.setForeground(Color.WHITE);
+        this.welcomeLabel.setForeground(Color.BLACK);
+        this.workoutCountValueLabel.setForeground(Color.BLACK);
+        this.weeklyWorkoutValueLabel.setForeground(Color.BLACK);
+        this.plansCountValueLabel.setForeground(Color.BLACK);
+        this.weightTrendValueLabel.setForeground(Color.BLACK);
 
         setLayout(new BorderLayout(16, 16));
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         JPanel header = new JPanel(new BorderLayout(12, 12));
         welcomeLabel.setFont(welcomeLabel.getFont().deriveFont(24f));
-        welcomeLabel.setForeground(Color.WHITE);
+        welcomeLabel.setForeground(Color.BLACK);
 
         JPanel summary = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
         summary.add(metricCard("Total Logs", workoutCountValueLabel));
@@ -121,8 +120,8 @@ public class DashboardPanel extends JPanel {
         // Ensure table header text is visible on dark theme
         DefaultTableCellRenderer headerRenderer = (DefaultTableCellRenderer) workoutTable.getTableHeader().getDefaultRenderer();
         headerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        headerRenderer.setForeground(Color.WHITE);
-        headerRenderer.setBackground(new Color(60, 60, 60));
+        headerRenderer.setForeground(Color.BLACK);
+        headerRenderer.setBackground(new Color(235, 235, 235));
         headerRenderer.setFont(headerRenderer.getFont().deriveFont(Font.BOLD));
         workoutTable.getTableHeader().setDefaultRenderer(headerRenderer);
         workoutTable.getTableHeader().setOpaque(true);
@@ -150,9 +149,9 @@ public class DashboardPanel extends JPanel {
         ));
 
         JLabel titleLabel = new JLabel(title, SwingConstants.LEFT);
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(Color.BLACK);
         valueLabel.setFont(valueLabel.getFont().deriveFont(18f));
-        valueLabel.setForeground(Color.WHITE);
+        valueLabel.setForeground(Color.BLACK);
 
         card.add(titleLabel, BorderLayout.NORTH);
         card.add(valueLabel, BorderLayout.SOUTH);

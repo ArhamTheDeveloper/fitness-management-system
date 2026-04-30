@@ -7,7 +7,6 @@ import database.WorkoutPlanItemDAO;
 import database.UserDAO;
 import database.WorkoutDAO;
 import java.awt.CardLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -15,8 +14,6 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatDarculaLaf;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JPasswordField;
@@ -106,27 +103,8 @@ public class FitnessSwingApp {
 
     private void initializeLookAndFeel() {
         try {
-            UIManager.setLookAndFeel(new FlatDarculaLaf());
-            UIManager.put("Label.foreground", Color.WHITE);
-            UIManager.put("Button.foreground", Color.WHITE);
-            UIManager.put("Button.background", new Color(75, 75, 75));
-            UIManager.put("Table.foreground", Color.WHITE);
-            UIManager.put("Table.background", new Color(43, 43, 43));
-            UIManager.put("Table.selectionForeground", Color.WHITE);
-            UIManager.put("TableHeader.foreground", Color.WHITE);
-            UIManager.put("TableHeader.background", new Color(60, 60, 60));
-            UIManager.put("Panel.background", new Color(43, 43, 43));
-            UIManager.put("ScrollPane.background", new Color(43, 43, 43));
-            UIManager.put("TextField.foreground", Color.WHITE);
-            UIManager.put("PasswordField.foreground", Color.WHITE);
-            UIManager.put("ComboBox.foreground", Color.WHITE);
-            UIManager.put("TitledBorder.titleColor", Color.WHITE);
-            UIManager.put("OptionPane.foreground", Color.WHITE);
-        } catch (Exception flatLafError) {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception ignored) {
-            }
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
         }
     }
 

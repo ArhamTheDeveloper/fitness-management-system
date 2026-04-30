@@ -37,9 +37,9 @@ public class RegisterPanel extends JPanel {
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
         JLabel titleLabel = new JLabel("Create Account", SwingConstants.LEFT);
         titleLabel.setFont(titleLabel.getFont().deriveFont(28f));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(Color.BLACK);
         JLabel subtitleLabel = new JLabel("Set up a new fitness profile", SwingConstants.LEFT);
-        subtitleLabel.setForeground(Color.WHITE);
+        subtitleLabel.setForeground(Color.BLACK);
         titlePanel.add(titleLabel);
         titlePanel.add(Box.createVerticalStrut(6));
         titlePanel.add(subtitleLabel);
@@ -85,7 +85,7 @@ public class RegisterPanel extends JPanel {
 
     private void addLabeledField(JPanel form, GridBagConstraints gbc, int row, String labelText, JComponent field) {
         JLabel label = new JLabel(labelText);
-        label.setForeground(Color.WHITE);
+        label.setForeground(Color.BLACK);
 
         gbc.gridx = 0;
         gbc.gridy = row;
