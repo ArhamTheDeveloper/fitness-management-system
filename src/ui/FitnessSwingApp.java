@@ -20,6 +20,8 @@ import javax.swing.JPasswordField;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
@@ -86,6 +88,7 @@ public class FitnessSwingApp {
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setMinimumSize(new Dimension(1100, 720));
         frame.setLocationRelativeTo(null);
+        frame.getContentPane().setBackground(AppTheme.BG);
 
         buildAuthPanel();
         rootPanel.add(authPanel, LOGIN_CARD);
@@ -106,6 +109,8 @@ public class FitnessSwingApp {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {
         }
+        // Apply shared color/font defaults after L&F so our overrides stick
+        AppTheme.applyGlobalDefaults();
     }
 
     private void buildAuthPanel() {
@@ -404,7 +409,17 @@ public class FitnessSwingApp {
             builder.append("\n");
         }
 
-        JOptionPane.showMessageDialog(frame, builder.toString(), "Workout Plans", JOptionPane.INFORMATION_MESSAGE);
+        // Display plans in a scrollable text area instead of a plain dialog
+        javax.swing.JTextArea textArea = new javax.swing.JTextArea(builder.toString());
+        textArea.setEditable(false);
+        textArea.setFont(AppTheme.FONT_LABEL);
+        textArea.setBackground(AppTheme.SURFACE);
+        textArea.setForeground(AppTheme.TEXT_PRIMARY);
+        textArea.setMargin(new java.awt.Insets(8, 8, 8, 8));
+        JScrollPane planScroll = new JScrollPane(textArea);
+        planScroll.setPreferredSize(new java.awt.Dimension(500, 320));
+        planScroll.setBorder(javax.swing.BorderFactory.createLineBorder(AppTheme.BORDER_COLOR));
+        JOptionPane.showMessageDialog(frame, planScroll, "Workout Plans", JOptionPane.PLAIN_MESSAGE);
     }
 
     private void handleAddPlanItem() {
@@ -747,36 +762,35 @@ public class FitnessSwingApp {
 
         List<ProgressEntry> entries = result.getData();
         if (entries == null || entries.isEmpty()) {
-            showInfo("No progress entries found.");
+            showInfo("No progress entries found. Use \'Log Progress\' to add your first entry.");
             return;
         }
 
-        StringBuilder builder = new StringBuilder();
-        builder.append("Progress History (Latest First):\n\n");
+        // Show history in a table instead of a raw text blob
+        String[] cols = {"Date", "Weight (kg)", "Body Fat %", "Chest (cm)", "Waist (cm)", "Hips (cm)", "Notes"};
+        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
+        };
 
-        for (ProgressEntry entry : entries) {
-            builder.append("Date: ").append(entry.getEntryDate()).append("\n");
-            if (entry.getWeight() != null) {
-                builder.append("  Weight: ").append(String.format("%.2f", entry.getWeight())).append(" kg\n");
-            }
-            if (entry.getBodyFatPercentage() != null) {
-                builder.append("  Body Fat: ").append(String.format("%.2f", entry.getBodyFatPercentage())).append(" %\n");
-            }
-            if (entry.getChestCm() != null) {
-                builder.append("  Chest: ").append(String.format("%.1f", entry.getChestCm())).append(" cm\n");
-            }
-            if (entry.getWaistCm() != null) {
-                builder.append("  Waist: ").append(String.format("%.1f", entry.getWaistCm())).append(" cm\n");
-            }
-            if (entry.getHipsCm() != null) {
-                builder.append("  Hips: ").append(String.format("%.1f", entry.getHipsCm())).append(" cm\n");
-            }
-            if (entry.getNotes() != null && !entry.getNotes().isEmpty()) {
-                builder.append("  Notes: ").append(entry.getNotes()).append("\n");
-            }
-            builder.append("\n");
+        for (ProgressEntry e : entries) {
+            model.addRow(new Object[]{
+                e.getEntryDate() != null ? e.getEntryDate().toString().split(" ")[0] : "",
+                e.getWeight()            != null ? String.format("%.2f", e.getWeight())            : "-",
+                e.getBodyFatPercentage() != null ? String.format("%.2f", e.getBodyFatPercentage()) : "-",
+                e.getChestCm()           != null ? String.format("%.1f", e.getChestCm())           : "-",
+                e.getWaistCm()           != null ? String.format("%.1f", e.getWaistCm())           : "-",
+                e.getHipsCm()            != null ? String.format("%.1f", e.getHipsCm())            : "-",
+                e.getNotes()             != null ? e.getNotes()                                     : ""
+            });
         }
 
-        JOptionPane.showMessageDialog(frame, builder.toString(), "Progress History", JOptionPane.INFORMATION_MESSAGE);
+        JTable histTable = new JTable(model);
+        AppTheme.styleTable(histTable);
+        histTable.setPreferredScrollableViewportSize(new java.awt.Dimension(700, 220));
+
+        JScrollPane sp = new JScrollPane(histTable);
+        sp.setBorder(javax.swing.BorderFactory.createLineBorder(AppTheme.BORDER_COLOR));
+
+        JOptionPane.showMessageDialog(frame, sp, "Progress History (Latest First)", JOptionPane.PLAIN_MESSAGE);
     }
 }

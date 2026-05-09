@@ -2,8 +2,9 @@ package ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Font;
+import java.awt.GridLayout;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -12,15 +13,18 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.SwingConstants;
 
+/**
+ * Main dashboard shown after a successful login.
+ *
+ * Layout (top to bottom):
+ * [Header with welcome + logout]
+ * [Metric cards row]
+ * [Action bar rows]
+ * [Workout logs table]
+ */
 public class DashboardPanel extends JPanel {
-    private final JLabel welcomeLabel;
-    private final JLabel workoutCountValueLabel;
-    private final JLabel weeklyWorkoutValueLabel;
-    private final JLabel plansCountValueLabel;
-    private final JLabel weightTrendValueLabel;
 
     public DashboardPanel(
             JLabel welcomeLabel,
@@ -40,121 +44,179 @@ public class DashboardPanel extends JPanel {
             Runnable onRefreshCount,
             Runnable onLogout
     ) {
-        this.welcomeLabel = welcomeLabel;
-        this.workoutCountValueLabel = workoutCountValueLabel;
-        this.weeklyWorkoutValueLabel = weeklyWorkoutValueLabel;
-        this.plansCountValueLabel = plansCountValueLabel;
-        this.weightTrendValueLabel = weightTrendValueLabel;
+        setLayout(new BorderLayout(0, 12));
+        setBackground(AppTheme.BG);
+        setBorder(AppTheme.panelPadding());
 
-        this.welcomeLabel.setForeground(Color.BLACK);
-        this.workoutCountValueLabel.setForeground(Color.BLACK);
-        this.weeklyWorkoutValueLabel.setForeground(Color.BLACK);
-        this.plansCountValueLabel.setForeground(Color.BLACK);
-        this.weightTrendValueLabel.setForeground(Color.BLACK);
+        add(buildTopSection(
+                welcomeLabel,
+                workoutCountValueLabel, weeklyWorkoutValueLabel,
+                plansCountValueLabel, weightTrendValueLabel,
+                onAddWorkout, onEditWorkout, onDeleteWorkout,
+                onManagePlans, onTrackProgress,
+                onViewAll, onViewRecent, onDateRange, onRefreshCount,
+                onLogout
+        ), BorderLayout.NORTH);
 
-        setLayout(new BorderLayout(16, 16));
-        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        JPanel header = new JPanel(new BorderLayout(12, 12));
-        welcomeLabel.setFont(welcomeLabel.getFont().deriveFont(24f));
-        welcomeLabel.setForeground(Color.BLACK);
-
-        JPanel summary = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
-        summary.add(metricCard("Total Logs", workoutCountValueLabel));
-        summary.add(metricCard("This Week", weeklyWorkoutValueLabel));
-        summary.add(metricCard("Plans", plansCountValueLabel));
-        summary.add(metricCard("Weight Trend", weightTrendValueLabel));
-
-        header.add(welcomeLabel, BorderLayout.NORTH);
-        header.add(summary, BorderLayout.SOUTH);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        JButton addWorkoutButton = new JButton("Add Workout");
-        addWorkoutButton.addActionListener(e -> onAddWorkout.run());
-
-        JButton editWorkoutButton = new JButton("Edit Selected");
-        editWorkoutButton.addActionListener(e -> onEditWorkout.run());
-
-        JButton deleteWorkoutButton = new JButton("Delete Selected");
-        deleteWorkoutButton.addActionListener(e -> onDeleteWorkout.run());
-
-        JButton plansButton = new JButton("Plans");
-        plansButton.addActionListener(e -> onManagePlans.run());
-
-        JButton progressButton = new JButton("Progress");
-        progressButton.addActionListener(e -> onTrackProgress.run());
-
-        JButton showAllButton = new JButton("View All");
-        showAllButton.addActionListener(e -> onViewAll.run());
-
-        JButton recentButton = new JButton("Recent");
-        recentButton.addActionListener(e -> onViewRecent.run());
-
-        JButton rangeButton = new JButton("Date Range");
-        rangeButton.addActionListener(e -> onDateRange.run());
-
-        JButton countButton = new JButton("Refresh Count");
-        countButton.addActionListener(e -> onRefreshCount.run());
-
-        JButton logoutButton = new JButton("Logout");
-        logoutButton.addActionListener(e -> onLogout.run());
-
-        actions.add(addWorkoutButton);
-        actions.add(editWorkoutButton);
-        actions.add(deleteWorkoutButton);
-        actions.add(plansButton);
-        actions.add(progressButton);
-        actions.add(showAllButton);
-        actions.add(recentButton);
-        actions.add(rangeButton);
-        actions.add(countButton);
-        actions.add(logoutButton);
-
-        JPanel topSection = new JPanel();
-        topSection.setLayout(new BoxLayout(topSection, BoxLayout.Y_AXIS));
-        topSection.add(header);
-        topSection.add(Box.createVerticalStrut(10));
-        topSection.add(actions);
-
-        workoutTable.setRowHeight(26);
-        // Ensure table header text is visible on dark theme
-        DefaultTableCellRenderer headerRenderer = (DefaultTableCellRenderer) workoutTable.getTableHeader().getDefaultRenderer();
-        headerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        headerRenderer.setForeground(Color.BLACK);
-        headerRenderer.setBackground(new Color(235, 235, 235));
-        headerRenderer.setFont(headerRenderer.getFont().deriveFont(Font.BOLD));
-        workoutTable.getTableHeader().setDefaultRenderer(headerRenderer);
-        workoutTable.getTableHeader().setOpaque(true);
-        workoutTable.getTableHeader().setReorderingAllowed(false);
-        JScrollPane scrollPane = new JScrollPane(workoutTable);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Workout Logs"));
-
-        add(topSection, BorderLayout.NORTH);
-        add(scrollPane, BorderLayout.CENTER);
+        AppTheme.styleTable(workoutTable);
+        JScrollPane sp = AppTheme.styledScrollPane(workoutTable, "Workout Logs");
+        add(sp, BorderLayout.CENTER);
     }
 
-    public void setWelcomeText(String text) {
-        welcomeLabel.setText(text);
+    // Top section (header + metrics + action bar)
+
+    private JPanel buildTopSection(
+            JLabel welcomeLabel,
+            JLabel totalLogsLabel,
+            JLabel weeklyLabel,
+            JLabel plansLabel,
+            JLabel weightTrendLabel,
+            Runnable onAdd, Runnable onEdit, Runnable onDelete,
+            Runnable onPlans, Runnable onProgress,
+            Runnable onViewAll, Runnable onRecent, Runnable onDateRange,
+            Runnable onRefresh, Runnable onLogout
+    ) {
+        JPanel top = new JPanel();
+        top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
+        top.setBackground(AppTheme.BG);
+
+        // Welcome row + logout button
+        top.add(buildHeaderRow(welcomeLabel, onLogout));
+        top.add(Box.createVerticalStrut(12));
+
+        // Metric cards
+        top.add(buildMetricsRow(totalLogsLabel, weeklyLabel, plansLabel, weightTrendLabel));
+        top.add(Box.createVerticalStrut(12));
+
+        // Action bar
+        top.add(buildActionBar(onAdd, onEdit, onDelete, onPlans, onProgress, onViewAll, onRecent, onDateRange, onRefresh));
+        top.add(Box.createVerticalStrut(4));
+
+        return top;
     }
 
-    public void setWorkoutCount(int count) {
-        workoutCountValueLabel.setText(String.valueOf(count));
+    private JPanel buildHeaderRow(JLabel welcomeLabel, Runnable onLogout) {
+        welcomeLabel.setFont(AppTheme.FONT_TITLE);
+        welcomeLabel.setForeground(AppTheme.TEXT_PRIMARY);
+
+        JButton logoutBtn = AppTheme.dangerButton("Logout");
+        logoutBtn.addActionListener(e -> onLogout.run());
+
+        JPanel row = new JPanel(new BorderLayout());
+        row.setBackground(AppTheme.BG);
+        row.add(welcomeLabel, BorderLayout.WEST);
+        row.add(logoutBtn, BorderLayout.EAST);
+        return row;
     }
 
-    private JPanel metricCard(String title, JLabel valueLabel) {
-        JPanel card = new JPanel(new BorderLayout());
+    private JPanel buildMetricsRow(JLabel totalLogs, JLabel weekly, JLabel plans, JLabel weightTrend) {
+        JPanel row = new JPanel(new GridLayout(1, 4, 12, 0));
+        row.setBackground(AppTheme.BG);
+        row.add(metricCard("Total Logs", totalLogs, AppTheme.PRIMARY));
+        row.add(metricCard("This Week", weekly, new Color(16, 185, 129)));   // emerald
+        row.add(metricCard("Plans", plans, new Color(139, 92, 246)));         // violet
+        row.add(metricCard("Weight Trend", weightTrend, new Color(245, 158, 11))); // amber
+        return row;
+    }
+
+    private JPanel metricCard(String title, JLabel valueLabel, Color accentColor) {
+        JPanel card = new JPanel(new BorderLayout(0, 4));
+        card.setBackground(AppTheme.SURFACE);
         card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEtchedBorder(),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
+                BorderFactory.createLineBorder(AppTheme.BORDER_COLOR, 1, true),
+                BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
-        JLabel titleLabel = new JLabel(title, SwingConstants.LEFT);
-        titleLabel.setForeground(Color.BLACK);
-        valueLabel.setFont(valueLabel.getFont().deriveFont(18f));
-        valueLabel.setForeground(Color.BLACK);
+        // Left color strip
+        JPanel strip = new JPanel();
+        strip.setBackground(accentColor);
+        strip.setPreferredSize(new Dimension(4, 0));
 
-        card.add(titleLabel, BorderLayout.NORTH);
-        card.add(valueLabel, BorderLayout.SOUTH);
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(AppTheme.FONT_SMALL);
+        titleLabel.setForeground(AppTheme.TEXT_MUTED);
+
+        valueLabel.setFont(AppTheme.FONT_METRIC);
+        valueLabel.setForeground(AppTheme.TEXT_PRIMARY);
+        valueLabel.setHorizontalAlignment(SwingConstants.LEFT);
+
+        JPanel content = new JPanel(new BorderLayout(0, 4));
+        content.setBackground(AppTheme.SURFACE);
+        content.add(titleLabel, BorderLayout.NORTH);
+        content.add(valueLabel, BorderLayout.CENTER);
+
+        card.add(strip, BorderLayout.WEST);
+        card.add(content, BorderLayout.CENTER);
         return card;
+    }
+
+    private JPanel buildActionBar(
+            Runnable onAdd, Runnable onEdit, Runnable onDelete,
+            Runnable onPlans, Runnable onProgress,
+            Runnable onViewAll, Runnable onRecent, Runnable onDateRange, Runnable onRefresh
+    ) {
+        JPanel bar = new JPanel();
+        bar.setLayout(new BoxLayout(bar, BoxLayout.Y_AXIS));
+        bar.setBackground(AppTheme.BG);
+
+        // Row 1: CRUD actions
+        JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        row1.setBackground(AppTheme.BG);
+
+        JButton addBtn = AppTheme.primaryButton("Add Workout");
+        addBtn.addActionListener(e -> onAdd.run());
+
+        JButton editBtn = AppTheme.secondaryButton("Edit Selected");
+        editBtn.addActionListener(e -> onEdit.run());
+
+        JButton deleteBtn = AppTheme.dangerButton("Delete Selected");
+        deleteBtn.addActionListener(e -> onDelete.run());
+
+        // Separator label
+        JLabel sep1 = new JLabel("  |  ");
+        sep1.setForeground(AppTheme.BORDER_COLOR);
+
+        JButton plansBtn = AppTheme.primaryButton("Plans");
+        plansBtn.addActionListener(e -> onPlans.run());
+
+        JButton progressBtn = AppTheme.primaryButton("Progress");
+        progressBtn.addActionListener(e -> onProgress.run());
+
+        row1.add(addBtn);
+        row1.add(editBtn);
+        row1.add(deleteBtn);
+        row1.add(sep1);
+        row1.add(plansBtn);
+        row1.add(progressBtn);
+
+        // Row 2: filter actions
+        JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        row2.setBackground(AppTheme.BG);
+
+        JLabel filterLabel = new JLabel("Filter:");
+        filterLabel.setFont(AppTheme.FONT_SMALL);
+        filterLabel.setForeground(AppTheme.TEXT_MUTED);
+
+        JButton viewAllBtn = AppTheme.secondaryButton("All Logs");
+        viewAllBtn.addActionListener(e -> onViewAll.run());
+
+        JButton recentBtn = AppTheme.secondaryButton("Recent");
+        recentBtn.addActionListener(e -> onRecent.run());
+
+        JButton dateRangeBtn = AppTheme.secondaryButton("Date Range");
+        dateRangeBtn.addActionListener(e -> onDateRange.run());
+
+        JButton refreshBtn = AppTheme.secondaryButton("Refresh");
+        refreshBtn.addActionListener(e -> onRefresh.run());
+
+        row2.add(filterLabel);
+        row2.add(viewAllBtn);
+        row2.add(recentBtn);
+        row2.add(dateRangeBtn);
+        row2.add(refreshBtn);
+
+        bar.add(row1);
+        bar.add(row2);
+        return bar;
     }
 }

@@ -17,10 +17,10 @@ public class DBConnection{
             // Only create a new connection if one doesn't exist or was closed
             if (connection == null || connection.isClosed()) {
                 connection = DriverManager.getConnection(URL, USER, PASS);
-                System.out.println("🔌 New Database Connection Established.");
+                System.out.println("New Database Connection Established.");
             }
         } catch (Exception e) {
-            System.out.println("❌ Connection Failed! " + e.getMessage());
+            System.out.println("Connection Failed! " + e.getMessage());
         }
         return connection;
     }
